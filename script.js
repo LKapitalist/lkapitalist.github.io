@@ -163,20 +163,17 @@ const RESISTANCE_STATES = {
 
 
 const ACTION_TYPES = [
-    "Arme",
-    "Action de Race",
-    "Action de Classe",
-    "Trait notable",
-    "Sort"
+    "Action",
+    "Sort",
+    "Trait notable"
 ];
 
 
 const ACTION_COSTS = [
     "Action",
-    "Action bonus",
-    "Réaction",
-    "Passif",
-    "Aucune action"
+    "Action Bonus",
+    "Reaction",
+    "Passif"
 ];
 
 
@@ -247,6 +244,19 @@ const blankCharacter = () => ({
     ac: 10,
     initiative: 0,
     speed: 9,
+    inspiration: 0,
+    statIcons: {
+        hp: "",
+        ac: "",
+        initiative: "",
+        inspiration: "",
+        speed: ""
+    },
+    resources: [
+        { key: "action", name: "Action", value: 1, max: 1, icon: "", fixed: true },
+        { key: "bonus", name: "Action bonus", value: 1, max: 1, icon: "", fixed: true },
+        { key: "reaction", name: "Reaction", value: 1, max: 1, icon: "", fixed: true }
+    ],
 
     proficiencyBonus: 2,
 
@@ -440,7 +450,7 @@ function home() {
                 ></div>
 
                 <p class="update">
-                    V9
+                    V10.4.1
                 </p>
 
             </div>
@@ -1299,14 +1309,17 @@ function normalize() {
                 normalizeCost(action.cost),
 
             type:
-                action.type ||
-                "Action de Classe",
+                ACTION_TYPES.includes(action.type)
+                    ? action.type
+                    : "Action",
 
             level:
                 action.level ?? "",
 
             damage:
-                action.damage || "",
+                normalizeActionDamage(action.damage),
+            attackRoll:
+                normalizeAttackRoll(action.attackRoll),
 
             description:
                 action.description || "",
@@ -1341,7 +1354,46 @@ function normalize() {
         }));
 
 
-    delete character.resources;
+    character.inspiration = Number(character.inspiration || 0);
+    character.statIcons = {
+        ...b.statIcons,
+        ...(character.statIcons || {})
+    };
+    const oldResources = Array.isArray(character.resources)
+        ? character.resources
+        : [];
+    const fixedResources = b.resources.map(base => {
+        const old = oldResources.find(resource => resource.key === base.key) || {};
+        const max = Math.max(0, Number(old.max ?? old.value ?? base.max));
+        const value = Math.max(0, Math.min(Number(old.value ?? max), max));
+        return { ...base, ...old, max, value, fixed: true };
+    });
+    const customResources = oldResources
+        .filter(resource => !["action", "bonus", "reaction", "other1"].includes(resource.key))
+        .map((resource, i) => {
+            const max = Math.max(0, Number(resource.max ?? resource.value ?? 0));
+            return {
+                key: resource.key || `custom_${i}_${Date.now()}`,
+                name: resource.name || "Ressource",
+                value: Math.max(0, Math.min(Number(resource.value ?? max), max)),
+                max,
+                icon: resource.icon || "",
+                fixed: false
+            };
+        });
+    const legacyOther = oldResources.find(resource => resource.key === "other1");
+    if (legacyOther && (legacyOther.enabled || legacyOther.name !== "Ressource autre1" || legacyOther.value)) {
+        const max = Math.max(0, Number(legacyOther.max ?? legacyOther.value ?? 0));
+        customResources.push({
+            key: "custom_legacy",
+            name: legacyOther.name || "Ressource",
+            value: Math.max(0, Math.min(Number(legacyOther.value ?? max), max)),
+            max,
+            icon: legacyOther.icon || "",
+            fixed: false
+        });
+    }
+    character.resources = [...fixedResources, ...customResources];
 
 
     if (!character.proficiencyBonus) {
@@ -1350,10 +1402,67 @@ function normalize() {
 }
 
 
+
+function normalizeActionDamage(damage) {
+    if (damage && typeof damage === "object") {
+        return {
+            enabled: damage.enabled === true,
+            count: Math.max(1, Number(damage.count || 1)),
+            die: DAMAGE_DICE.includes(Number(damage.die)) ? Number(damage.die) : 6,
+            bonus: Number(damage.bonus || 0),
+            type: DAMAGE_TYPES[damage.type] ? damage.type : "feu"
+        };
+    }
+    const match = String(damage || "").match(/(\d+)d(4|6|8|10|12|20)(?:\s*([+\-])\s*(\d+))?/i);
+    return {
+        enabled: Boolean(match),
+        count: match ? Number(match[1]) : 1,
+        die: match ? Number(match[2]) : 6,
+        bonus: match && match[4] ? Number(match[4]) * (match[3] === "-" ? -1 : 1) : 0,
+        type: "feu"
+    };
+}
+
+function normalizeAttackRoll(attackRoll) {
+    if (attackRoll && typeof attackRoll === "object") {
+        return { enabled: attackRoll.enabled === true, bonus: Number(attackRoll.bonus || 0) };
+    }
+    return { enabled: false, bonus: 0 };
+}
+function renderAttackRoll(attackRoll) {
+    if (!attackRoll?.enabled) return "";
+    const bonus = Number(attackRoll.bonus || 0);
+    return `<div class="action-attack-roll"><span>Jet d'attaque</span><strong>1d20 ${bonus >= 0 ? "+" : "−"} ${Math.abs(bonus)}</strong></div>`;
+}
+function damageDieIcon(die, type) {
+    const dieNumber = Number(die || 6);
+    if (dieNumber === 20) {
+        return "icons/dice/D20.png";
+    }
+    const physical = ["tranchant", "contondant", "perforant"].includes(type);
+    const damageName = physical
+        ? "Physique"
+        : (DAMAGE_TYPES[type] || type);
+    return `icons/dice/D${dieNumber}_${damageName}.png`;
+}
+function renderDamageValue(damage) {
+    if (!damage?.enabled) {
+        return "";
+    }
+    const color = `var(--damage-${damage.type}, ${DAMAGE_COLORS[damage.type] || "var(--accent)"})`;
+    const dice = Array.from({ length: Math.max(1, Number(damage.count || 1)) }, () =>
+        `<img src="${damageDieIcon(damage.die, damage.type)}" class="action-damage-die" alt="">`
+    ).join("");
+    const bonus = Number(damage.bonus || 0);
+    return `<div class="damage action-damage" style="color:${color}">${dice}<span>${damage.count}d${damage.die}${bonus ? ` ${bonus > 0 ? "+" : "−"} ${Math.abs(bonus)}` : ""}</span><img src="icons/resistances/${damage.type}.png" class="action-damage-type" alt=""></div>`;
+}
+
 function normalizeCost(cost) {
 
-    if (ACTION_COSTS.includes(cost)) {
-        return cost;
+    const aliases = { "Action bonus": "Action Bonus", "Réaction": "Reaction", "Aucune action": "Passif" };
+    const normalized = aliases[cost] || cost;
+    if (ACTION_COSTS.includes(normalized)) {
+        return normalized;
     }
 
     return "Action";
@@ -1846,6 +1955,22 @@ function editor() {
 
             <div class="card">
 
+                <h2>Ressources</h2>
+
+                <div
+                    id="editorResources"
+                    class="editor-list editor-list-single"
+                ></div>
+
+                <button onclick="addCustomResource()">
+                    + Ajouter une ressource personnalisée
+                </button>
+
+            </div>
+
+
+            <div class="card">
+
                 <h2>Combat</h2>
 
                 <div class="form-row">
@@ -2306,6 +2431,8 @@ function editor() {
 
     renderInventoryEditor();
 
+    renderResourceEditor();
+
     renderEditorActions();
 }
 
@@ -2571,6 +2698,68 @@ function renderInventoryEditor() {
    ACTION FORM
    ========================================================= */
 
+function addCustomResource() {
+    character.resources.push({
+        key: `custom_${Date.now()}`,
+        name: "Nouvelle ressource",
+        value: 1,
+        max: 1,
+        icon: "",
+        fixed: false
+    });
+    renderResourceEditor();
+}
+function removeCustomResource(index) {
+    const resource = character.resources[index];
+    if (!resource || resource.fixed) {
+        return;
+    }
+    character.resources.splice(index, 1);
+    renderResourceEditor();
+}
+function renderResourceEditor() {
+    const el = document.getElementById("editorResources");
+    if (!el) {
+        return;
+    }
+    el.innerHTML = character.resources.map((resource, i) => `
+        <div class="editor-item">
+            <div class="form-row form-row-3">
+                <div class="field">
+                    <label>Nom</label>
+                    <input value="${esc(resource.name)}" ${resource.fixed ? "disabled" : `oninput="character.resources[${i}].name = this.value"`}>
+                </div>
+                <div class="field">
+                    <label>Nombre maximum</label>
+                    <input type="number" min="0" value="${resource.max}" oninput="setResourceMaximum(${i}, this.value)">
+                </div>
+                <div class="field">
+                    <label>Icône</label>
+                    ${resource.fixed
+                        ? `<div class="resource-icon-source"><img src="${fixedResourceIcon(resource.key)}" class="resource-editor-icon" alt=""></div>`
+                        : `<input type="file" accept="image/*" onchange="handleResourceIconUpload(${i}, this)">${resource.icon ? `<div class="image-preview"><img src="${resource.icon}"></div>` : ""}`}
+                </div>
+            </div>
+            ${resource.fixed ? "" : `<button class="danger" onclick="removeCustomResource(${i})">Supprimer</button>`}
+        </div>
+    `).join("");
+}
+function fixedResourceIcon(key) {
+    const names = {
+        action: "Action",
+        bonus: "Action Bonus",
+        reaction: "Réaction"
+    };
+    return `icons/ressources/${names[key] || key}.png`;
+}
+function setResourceMaximum(index, value) {
+    const resource = character.resources[index];
+    if (!resource) {
+        return;
+    }
+    resource.max = Math.max(0, Number(value) || 0);
+    resource.value = resource.max;
+}
 function addActionForm() {
 
     character.actions.push({
@@ -2579,7 +2768,7 @@ function addActionForm() {
 
         cost: "Action",
 
-        type: "Action de Classe",
+        type: "Action",
 
         level: "",
 
@@ -2733,20 +2922,14 @@ function renderEditorActions() {
                         }
 
 
-                        <div class="field">
-
-                            <label>Dégâts</label>
-
-                            <input
-                                data-a="${i}"
-                                data-k="damage"
-                                placeholder="1d8 + 3"
-                                value="${esc(x.damage)}"
-                            >
-
+                        <div class="field attack-roll-editor-field">
+                            <label class="checkbox-row"><input type="checkbox" ${x.attackRoll?.enabled ? "checked" : ""} onchange="character.actions[${i}].attackRoll.enabled = this.checked; renderEditorActions();">Jet d'attaque</label>
+                            ${x.attackRoll?.enabled ? `<button type="button" onclick="openAttackRollEditor(${i})">1d20 ${Number(x.attackRoll.bonus || 0) >= 0 ? "+" : "−"} ${Math.abs(Number(x.attackRoll.bonus || 0))}</button>` : ""}
                         </div>
-
-
+                        <div class="field damage-editor-field">
+                            <label class="checkbox-row"><input type="checkbox" ${x.damage?.enabled ? "checked" : ""} onchange="character.actions[${i}].damage.enabled = this.checked; renderEditorActions();">Dégâts</label>
+                            ${x.damage?.enabled ? `<button type="button" onclick="openActionDamageEditor(${i})">${x.damage.count}d${x.damage.die}${Number(x.damage.bonus || 0) ? ` ${Number(x.damage.bonus) > 0 ? "+" : "−"} ${Math.abs(Number(x.damage.bonus))}` : ""} · ${DAMAGE_TYPES[x.damage.type]}</button>` : ""}
+                        </div>
                         <div class="field">
 
                             <label>Image</label>
@@ -3059,6 +3242,36 @@ function renderEditorActions() {
    EDITOR - IMAGE
    ========================================================= */
 
+
+function openAttackRollEditor(index) { const a=character.actions[index].attackRoll; document.body.insertAdjacentHTML("beforeend", `<div id="actionConfigModal" class="modal" onclick="closeActionConfigModal(event)"><div class="modal-content action-config-modal"><button class="close" onclick="closeActionConfigModal()">×</button><h2>Jet d'attaque</h2><div class="action-config-form"><div class="action-config-fixed-die">1d20</div><div class="field"><label>Bonus</label><input id="attackRollBonus" type="number" value="${a.bonus}"></div></div><div class="action-config-actions"><button onclick="closeActionConfigModal()">Annuler</button><button class="primary" onclick="saveAttackRollEditor(${index})">Valider</button></div></div></div>`); }
+function saveAttackRollEditor(index) { character.actions[index].attackRoll.bonus=Number(document.getElementById("attackRollBonus").value)||0; closeActionConfigModal(); renderEditorActions(); }
+function openActionDamageEditor(index) { const d=character.actions[index].damage; document.body.insertAdjacentHTML("beforeend", `<div id="actionConfigModal" class="modal" onclick="closeActionConfigModal(event)"><div class="modal-content action-config-modal"><button class="close" onclick="closeActionConfigModal()">×</button><h2>Configurer les dégâts</h2><div class="action-config-grid"><div class="field"><label>Nombre de dés</label><input id="actionDamageCount" type="number" min="1" value="${d.count}"></div><div class="field"><label>Dé</label><select id="actionDamageDie">${DAMAGE_DICE.map(n=>`<option value="${n}" ${d.die===n?"selected":""}>d${n}</option>`).join("")}</select></div><div class="field"><label>Bonus</label><input id="actionDamageBonus" type="number" value="${d.bonus}"></div><div class="field"><label>Type de dégâts</label><select id="actionDamageType">${Object.entries(DAMAGE_TYPES).map(([k,l])=>`<option value="${k}" ${d.type===k?"selected":""}>${l}</option>`).join("")}</select></div></div><div class="action-config-actions"><button onclick="closeActionConfigModal()">Annuler</button><button class="primary" onclick="saveActionDamageEditor(${index})">Valider</button></div></div></div>`); }
+function saveActionDamageEditor(index) { const d=character.actions[index].damage; d.count=Math.max(1,Number(document.getElementById("actionDamageCount").value)||1); d.die=Number(document.getElementById("actionDamageDie").value)||6; d.bonus=Number(document.getElementById("actionDamageBonus").value)||0; d.type=document.getElementById("actionDamageType").value; closeActionConfigModal(); renderEditorActions(); }
+function closeActionConfigModal(event) { if(event&&event.target.id!=="actionConfigModal")return; document.getElementById("actionConfigModal")?.remove(); }
+function readImageFile(input, callback) {
+    const file = input.files?.[0];
+    if (!file || !file.type.startsWith("image/")) {
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => callback(reader.result);
+    reader.readAsDataURL(file);
+}
+
+function handleCharacterIconUpload(key, input) {
+    readImageFile(input, result => {
+        character.statIcons[key] = result;
+        editor();
+    });
+}
+
+function handleResourceIconUpload(index, input) {
+    readImageFile(input, result => {
+        character.resources[index].icon = result;
+        editor();
+    });
+}
+
 function handleImageUpload(index, input) {
 
     const file =
@@ -3110,7 +3323,8 @@ function createFromEditor() {
         "hp",
         "ac",
         "initiative",
-        "speed"
+        "speed",
+        "inspiration"
     ];
 
     ids.forEach(id => {
@@ -3389,47 +3603,10 @@ function sheet() {
                 <div class="sheet-stats">
 
                 <div class="character-bar">
-
-                    <div
-                        class="character-stat hp-stat"
-                        onclick="openHpEditor()"
-                    >
-
-                        <span>PV</span>
-
-                        <strong class="hp-display">
-
-                            ${c.hp}/${c.hpMax}
-
-                            ${
-                                c.tempHp > 0
-                                ? `<div class="temp-hp">+${c.tempHp}</div>`
-                                : ""
-                            }
-
-                        </strong>
-
-                    </div>
-
-                    <div class="character-stat">
-                        <span>CA</span>
-                        <strong>${c.ac}</strong>
-                    </div>
-
-                    <div class="character-stat">
-                        <span>Initiative</span>
-                        <strong>
-                            ${fmt(c.initiative)}
-                        </strong>
-                    </div>
-
-                    <div class="character-stat">
-                        <span>Vitesse</span>
-                        <strong>
-                            ${c.speed} m
-                        </strong>
-                    </div>
-
+                    <div class="character-stat hp-stat" onclick="openHpEditor()"><span>PV</span><strong class="hp-display">${c.hp}/${c.hpMax}${c.tempHp > 0 ? `<div class="temp-hp">+${c.tempHp}</div>` : ""}</strong>${c.statIcons.hp ? `<img class="stat-icon" src="${c.statIcons.hp}" alt="">` : ""}</div>
+                    <div class="character-stat"><span>CA</span><strong>${c.ac}</strong>${c.statIcons.ac ? `<img class="stat-icon" src="${c.statIcons.ac}" alt="">` : ""}</div>
+                    <div class="character-stat"><span>Initiative</span><strong>${fmt(c.initiative)}</strong>${c.statIcons.initiative ? `<img class="stat-icon" src="${c.statIcons.initiative}" alt="">` : ""}</div>
+                    <div class="character-stat"><span>Inspiration</span><strong>${c.inspiration}</strong>${c.statIcons.inspiration ? `<img class="stat-icon" src="${c.statIcons.inspiration}" alt="">` : ""}</div>
                 </div>
 
 
@@ -3563,7 +3740,7 @@ function sheet() {
         </div>
 
         <p class="update">
-            V9
+            V10.4.1
         </p>
 
     `;
@@ -4023,6 +4200,7 @@ function renderActionsPage() {
         );
 
     return `
+        ${renderCharacterResources()}
 
         ${renderActionIsland(
             "Actions",
@@ -4031,18 +4209,112 @@ function renderActionsPage() {
 
         ${renderActionIsland(
             "Actions bonus",
-            actions.filter(x => x.cost === "Action bonus")
+            actions.filter(x => x.cost === "Action Bonus")
         )}
 
         ${renderActionIsland(
             "Réactions",
-            actions.filter(x => x.cost === "Réaction")
+            actions.filter(x => x.cost === "Reaction")
         )}
 
     `;
 }
 
 
+
+function renderCharacterResources() {
+    const c = character;
+    const entries = [
+        ...c.resources.map(resource => ({
+            name: resource.name,
+            value: resource.fixed
+                ? resource.value
+                : `${resource.value} / ${resource.max}`,
+            icon: resource.fixed
+                ? fixedResourceIcon(resource.key)
+                : resource.icon,
+            index: c.resources.indexOf(resource),
+            editable: !resource.fixed
+        })),
+        {
+            name: "Déplacement",
+            value: `${c.speed} m`,
+            icon: "icons/ressources/Deplacement.png",
+            index: -1,
+            editable: false
+        }
+    ];
+
+    if (!entries.length) {
+        return "";
+    }
+
+    return `
+        <div class="card">
+            <h2>Ressources</h2>
+            <div class="resist-grid">
+                ${entries
+                .map(
+                    resource => `
+                        <div
+                            class="resist-case resource-case ${resource.editable ? "resource-editable" : ""}"
+                            ${resource.editable ? `onclick="openResourceEditor(${resource.index})"` : ""}
+                        >
+                            ${resource.icon
+                                ? `<img src="${resource.icon}" class="resist-icon" alt="">`
+                                : ""
+                            }
+                            <strong>
+                                ${esc(resource.name)}
+                            </strong>
+                            <small>
+                                ${resource.value}
+                            </small>
+                        </div>
+                    `
+                )
+                .join("")}
+            </div>
+        </div>
+    `;
+}
+function openResourceEditor(index) {
+    const resource = character.resources[index];
+    if (!resource || resource.fixed) {
+        return;
+    }
+    const overlay = document.createElement("div");
+    overlay.className = "hp-editor-overlay";
+    overlay.id = "resourceEditorOverlay";
+    overlay.innerHTML = `
+        <div class="hp-editor">
+            <h2>${esc(resource.name)}</h2>
+            <div class="hp-field">
+                <label>Ressource restante</label>
+                <input id="edit-resource-value" type="number" min="0" max="${resource.max}" value="${resource.value}">
+                <small>Maximum : ${resource.max}</small>
+            </div>
+            <div class="hp-editor-actions">
+                <button onclick="closeResourceEditor()">Annuler</button>
+                <button class="primary" onclick="saveResourceEditor(${index})">Valider</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+function saveResourceEditor(index) {
+    const resource = character.resources[index];
+    if (!resource) {
+        return;
+    }
+    const value = Number(document.getElementById("edit-resource-value").value);
+    resource.value = Math.max(0, Math.min(Number.isFinite(value) ? value : resource.max, resource.max));
+    closeResourceEditor();
+    sheet();
+}
+function closeResourceEditor() {
+    document.getElementById("resourceEditorOverlay")?.remove();
+}
 function renderActionIsland(title, actions) {
 
     return `
@@ -4738,15 +5010,8 @@ function renderSpellCard(x) {
                 </div>
 
 
-                ${
-                    x.damage
-                    ?
-                    `<div class="damage">
-                        ${esc(x.damage)}
-                    </div>`
-                    :
-                    ""
-                }
+                ${renderAttackRoll(x.attackRoll)}
+                ${renderDamageValue(x.damage)}
 
                 <button
                     class="primary"
@@ -5432,17 +5697,8 @@ function renderActionCard(x) {
                 </div>
 
 
-                ${
-                    x.damage
-                    ?
-                    `
-                        <div class="damage">
-                            ${esc(x.damage)}
-                        </div>
-                    `
-                    :
-                    ""
-                }
+                ${renderAttackRoll(x.attackRoll)}
+                ${renderDamageValue(x.damage)}
 
                 <button
                     class="primary"
@@ -5734,9 +5990,8 @@ function showAction(i) {
                 }
 
 
-                <div class="damage">
-                    ${esc(x.damage || "—")}
-                </div>
+                ${renderAttackRoll(x.attackRoll)}
+                ${renderDamageValue(x.damage)}
 
 
                 <p>
@@ -6713,7 +6968,7 @@ function companionSheet() {
         </div>
 
         <p class="update">
-            V9
+            V10.4.1
         </p>
 
     `;
@@ -6895,12 +7150,12 @@ function renderCompanionActionsPage() {
 
         ${renderCompanionActionIsland(
             "Actions bonus",
-            c.actions.filter(x => x.cost === "Action bonus")
+            c.actions.filter(x => x.cost === "Action Bonus")
         )}
 
         ${renderCompanionActionIsland(
             "Réactions",
-            c.actions.filter(x => x.cost === "Réaction")
+            c.actions.filter(x => x.cost === "Reaction")
         )}
 
         ${renderCompanionActionIsland(
