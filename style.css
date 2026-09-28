@@ -1,0 +1,2529 @@
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+
+
+:root {
+
+    --bg: #101217;
+    --panel: #191c23;
+    --panel2: #232731;
+
+    --border: #303542;
+
+    --text: #f2f3f5;
+    --muted: #9ca3af;
+
+    --accent: #b98cff;
+    --accent-soft: #b98cff22;
+
+    --good: #6ee7a0;
+    --danger: #ff7777;
+
+}
+
+
+html {
+    font-size: calc(16px * var(--zoom));
+}
+
+
+html,
+body {
+
+    max-width: 100%;
+
+    overflow-x: hidden;
+}
+
+
+body {
+
+    margin: 0;
+
+    background: var(--bg);
+
+    color: var(--text);
+
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    transition:
+        font-size .2s ease;
+}
+
+
+button,
+input,
+select,
+textarea {
+
+    font: inherit;
+}
+
+
+button {
+
+    border: 1px solid var(--border);
+
+    background: var(--panel2);
+
+    color: var(--text);
+
+    border-radius: 10px;
+
+    padding: 10px 14px;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+    transition:
+        filter .15s ease,
+        transform .1s ease;
+}
+
+
+button:hover {
+
+    filter: brightness(1.12);
+}
+
+
+button:active {
+
+    transform: scale(.97);
+}
+
+
+.primary {
+
+    background: var(--accent);
+
+    color: #17121e;
+
+    border-color: transparent;
+}
+
+
+.danger {
+
+    color: #ff9999;
+}
+
+.update {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+}
+
+
+/* =========================================================
+   THEMES
+   ========================================================= */
+
+body.theme-purple {
+
+    --accent: #b98cff;
+    --accent-soft: #b98cff22;
+    --border: #303542;
+
+}
+
+
+body.theme-blue {
+
+    --accent: #60a5fa;
+    --accent-soft: #60a5fa22;
+    --border: #334155;
+
+}
+
+
+body.theme-green {
+
+    --accent: #6ee7a0;
+    --accent-soft: #6ee7a022;
+    --border: #30463a;
+
+}
+
+
+body.theme-red {
+
+    --accent: #ff7777;
+    --accent-soft: #ff777722;
+    --border: #493333;
+
+}
+
+
+body.theme-orange {
+
+    --accent: #ffad60;
+    --accent-soft: #ffad6022;
+    --border: #4b3b2d;
+
+}
+
+
+body.theme-cyan {
+
+    --accent: #67e8f9;
+    --accent-soft: #67e8f922;
+    --border: #30464b;
+
+}
+
+
+body.theme-pink {
+
+    --accent: #f472b6;
+    --accent-soft: #f472b622;
+    --border: #4b3040;
+
+}
+
+
+/* =========================================================
+   THEME SELECTOR
+   ========================================================= */
+
+.theme-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+
+    margin-top: 20px;
+
+}
+
+
+.theme-option {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 14px;
+
+    border-radius: 12px;
+
+    background: var(--panel2);
+
+    border: 1px solid var(--border);
+
+    color: var(--text);
+
+    text-align: left;
+
+}
+
+
+.theme-option:hover {
+
+    border-color: var(--accent);
+
+    transform: translateY(-1px);
+
+}
+
+
+.theme-option span {
+
+    width: 22px;
+
+    height: 22px;
+
+    border-radius: 50%;
+
+    flex-shrink: 0;
+
+}
+
+
+/* Couleurs des pastilles */
+
+.theme-purple-option span {
+    background: #b98cff;
+}
+
+.theme-blue-option span {
+    background: #60a5fa;
+}
+
+.theme-green-option span {
+    background: #6ee7a0;
+}
+
+.theme-red-option span {
+    background: #ff7777;
+}
+
+.theme-orange-option span {
+    background: #ffad60;
+}
+
+.theme-cyan-option span {
+    background: #67e8f9;
+}
+
+.theme-pink-option span {
+    background: #f472b6;
+}
+
+
+@media(max-width:650px) {
+
+    .theme-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+.page-nav {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+
+.page-nav {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(110px, 1fr));
+
+    gap: 7px;
+
+    margin-bottom: 18px;
+}
+
+
+.page-nav button {
+
+    padding: 12px 8px;
+
+    font-size: 13px;
+}
+
+
+.page-nav button.active {
+
+    background: var(--accent);
+
+    color: #17121e;
+
+    border-color: transparent;
+}
+
+
+/* =========================================================
+   MASTERY
+   ========================================================= */
+
+.skill.mastered {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+
+    box-shadow:
+        0 0 0 1px var(--accent-soft);
+
+}
+
+
+.editor-item.mastered {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+
+    box-shadow:
+        0 0 0 1px var(--accent-soft);
+
+}
+
+
+.mastery-badge {
+
+    display: inline-block;
+
+    margin-left: 6px;
+
+    padding: 2px 6px;
+
+    border-radius: 6px;
+
+    background: var(--accent-soft);
+
+    color: var(--accent);
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+}
+
+
+/* =========================================================
+   APP
+   ========================================================= */
+
+.app {
+
+    width: min(100%, 950px);
+
+    margin: auto;
+
+    padding: 18px;
+}
+
+
+/* =========================================================
+   HOME
+   ========================================================= */
+
+.center {
+
+    min-height: 90vh;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+}
+
+
+.home {
+
+    width: min(560px, 100%);
+}
+
+
+.logo {
+
+    font-size: 42px;
+
+    margin: 0 0 6px;
+}
+
+
+.subtitle {
+
+    color: var(--muted);
+
+    margin-bottom: 28px;
+}
+
+
+.home-actions {
+
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 10px;
+}
+
+
+.home-actions button {
+
+    padding: 16px;
+
+    font-size: 16px;
+}
+
+
+.theme-corner-btn {
+
+    position: fixed;
+
+    top: 16px;
+
+    right: 16px;
+
+    padding: 8px 14px;
+
+    font-size: 13px;
+
+    z-index: 10;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.character-header {
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 50;
+
+    background: var(--bg);
+
+    padding-bottom: 12px;
+
+    margin-bottom: 10px;
+}
+
+
+header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.header-info {
+    margin-left: 0;
+}
+
+.header-info h1 {
+
+    margin: 0 0 3px;
+
+    font-size: 24px;
+}
+
+
+.header-info p {
+
+    color: var(--muted);
+
+    margin: 0;
+}
+
+
+.header-actions {
+    margin-left: auto;
+
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.class-icon {
+    width: 90px;
+    height: 90px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   COLLAPSE TOGGLE (HEADER)
+   ========================================================= */
+
+.collapse-toggle {
+
+    display: none;
+
+    width: 100%;
+
+    margin-bottom: 10px;
+
+    padding: 10px;
+
+    font-size: 13px;
+
+    text-align: center;
+
+    background: var(--panel2);
+
+    color: var(--muted);
+}
+
+
+.sheet-stats {
+
+    max-height: 900px;
+
+    overflow: hidden;
+
+    opacity: 1;
+
+    transition:
+        max-height .3s ease,
+        opacity .2s ease,
+        margin .2s ease;
+}
+
+
+.character-header.collapsed .sheet-stats {
+
+    max-height: 0;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+
+
+/* =========================================================
+   HP DISPLAY
+   ========================================================= */
+
+.hp-stat {
+    cursor: pointer;
+}
+
+.hp-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.temp-hp {
+    color: var(--accent);
+}
+
+
+/* =========================================================
+   HP EDITOR
+   ========================================================= */
+
+.hp-editor-overlay {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1000;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(0, 0, 0, .65);
+
+    backdrop-filter: blur(5px);
+}
+
+
+.hp-editor {
+
+    width: min(400px, 100%);
+
+    padding: 22px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 14px;
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+}
+
+
+.hp-editor h2 {
+
+    margin: 0 0 20px;
+
+    font-size: 20px;
+}
+
+
+.hp-field {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    margin-bottom: 16px;
+}
+
+
+.hp-field label {
+
+    font-weight: 700;
+}
+
+
+.hp-field small {
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+.hp-field input {
+
+    width: 100%;
+
+    padding: 10px 12px;
+
+    font-size: 16px;
+
+    background: var(--panel2);
+
+    color: var(--text);
+
+    border: 1px solid var(--border);
+
+    border-radius: 8px;
+
+    outline: none;
+}
+
+
+.hp-field input:focus {
+
+    border-color: var(--primary);
+}
+
+
+.hp-editor-actions {
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    margin-top: 20px;
+}
+
+/* =========================================================
+   PERMANANT HEADER
+   ========================================================= */
+
+.character-bar {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 8px;
+
+    margin-bottom: 10px;
+}
+
+
+.character-stat {
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 10px;
+
+    text-align: center;
+}
+
+
+.character-stat span {
+
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+.character-stat strong {
+
+    display: block;
+
+    font-size: 22px;
+
+    margin-top: 3px;
+}
+
+
+.character-abilities {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(6, 1fr);
+
+    gap: 6px;
+
+    margin-bottom: 12px;
+}
+
+.ability-image {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+
+.character-ability {
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 10px;
+
+    padding: 7px;
+
+    text-align: center;
+}
+
+
+.character-ability span {
+
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 11px;
+}
+
+
+.character-ability strong {
+
+    font-size: 18px;
+}
+
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.card {
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 14px;
+
+    padding: 15px;
+
+    margin-bottom: 14px;
+}
+
+
+.card h2 {
+
+    margin-bottom: 12px;
+}
+
+
+h1,
+h2,
+h3,
+p {
+
+    margin-top: 0;
+}
+
+
+/* =========================================================
+   SKILLS
+   ========================================================= */
+
+.skills {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 8px;
+}
+
+.skill-icon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.skill-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.skill-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.skill-info small {
+    font-size: 0.75em;
+    opacity: 0.6;
+}
+
+.skill {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    text-align: left;
+
+    align-items: center;
+}
+
+
+.skill b {
+
+    color: var(--accent);
+}
+
+
+.skill-mastered {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+
+    box-shadow:
+        0 0 0 1px var(--accent-soft);
+}
+
+
+
+
+.skill-description {
+
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 11px;
+
+    margin-top: 2px;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.actions {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+}
+
+
+.action-card {
+
+    text-align: left;
+
+    min-height: 105px;
+
+    display: grid;
+
+    grid-template-columns: 64px 1fr;
+
+    gap: 10px;
+
+    align-items: center;
+}
+
+
+.action-image {
+
+    width: 64px;
+
+    height: 64px;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+    background: var(--panel);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+}
+
+
+.action-image img {
+
+    width: 64px;
+
+    height: 64px;
+
+    object-fit: cover;
+
+    display: block;
+}
+
+
+.action-placeholder {
+
+    font-size: 28px;
+}
+
+
+.action-info {
+
+    min-width: 0;
+}
+
+
+.action-info strong {
+
+    display: block;
+
+    margin-bottom: 4px;
+}
+
+
+.action-info small {
+
+    color: var(--muted);
+
+    display: block;
+}
+
+
+.action-type {
+
+    color: var(--accent);
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   SPELLS
+   ========================================================= */
+
+.spell-card {
+
+    display: grid;
+
+    grid-template-columns:
+        64px 1fr;
+
+    gap: 12px;
+
+    align-items: start;
+}
+
+.spell-slots-card {
+    margin-top: 15px;
+}
+
+
+.spell-image {
+
+    width: 64px;
+
+    height: 64px;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+    background: var(--panel2);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+
+.spell-image img {
+
+    width: 64px;
+
+    height: 64px;
+
+    object-fit: cover;
+}
+
+
+.spell-info h3 {
+
+    margin-bottom: 4px;
+}
+
+
+.spell-meta {
+
+    color: var(--muted);
+
+    font-size: 13px;
+}
+
+
+.spell-stats {
+
+    margin-top: 10px;
+
+    padding: 10px;
+
+    background: var(--panel2);
+
+    border-radius: 10px;
+}
+
+
+.damage {
+
+    font-size: 24px;
+
+    color: var(--accent);
+
+    font-weight: 800;
+
+    margin: 10px 0;
+    
+}
+
+
+/* =========================================================
+   RESOURCES
+   ========================================================= */
+
+.resources {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 8px;
+}
+
+
+.resource {
+
+    background: var(--panel2);
+
+    padding: 11px;
+
+    border-radius: 10px;
+
+    display: flex;
+
+    justify-content: space-between;
+}
+
+
+.ready {
+
+    color: var(--good);
+}
+
+
+/* =========================================================
+   SPELL SLOTS
+   ========================================================= */
+
+.slots {
+
+    display: grid;
+
+    gap: 12px;
+}
+
+
+.slot-row {
+
+    display: flex;
+
+    gap: 7px;
+
+    margin-top: 6px;
+
+    flex-wrap: wrap;
+}
+
+
+.slot {
+
+    width: 28px;
+
+    height: 28px;
+
+    border-radius: 0%;
+
+    padding: 0;
+
+    background: var(--accent);
+    border: 2px solid var(--accent);
+
+    
+}
+
+
+.slot.used {
+
+    background: #222;
+    border-color: #333;
+}
+
+
+/* =========================================================
+   DICE
+   ========================================================= */
+
+.dice {
+
+    display: flex;
+
+    gap: 7px;
+
+    flex-wrap: wrap;
+}
+
+
+.result {
+
+    width: 100%;
+
+    padding: 13px;
+
+    background: var(--panel2);
+
+    border-radius: 10px;
+
+    text-align: center;
+
+    font-size: 22px;
+
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   FORMS
+   ========================================================= */
+
+.form {
+
+    display: grid;
+
+    gap: 14px;
+}
+
+
+.form-row {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+}
+
+
+.field {
+
+    display: grid;
+
+    gap: 5px;
+}
+
+
+.field label {
+
+    font-size: 13px;
+
+    color: var(--muted);
+}
+
+
+input,
+select,
+textarea {
+
+    width: 100%;
+
+    background: var(--panel2);
+
+    color: var(--text);
+
+    border: 1px solid var(--border);
+
+    border-radius: 9px;
+
+    padding: 10px;
+}
+
+
+textarea {
+
+    min-height: 80px;
+
+    resize: vertical;
+}
+
+
+/* =========================================================
+   ABILITIES EDITOR
+   ========================================================= */
+
+.abilities {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(6, 1fr);
+
+    gap: 7px;
+}
+
+
+.ability {
+
+    text-align: center;
+}
+
+
+.ability input {
+
+    padding: 9px 5px;
+
+    text-align: center;
+}
+
+.ability-bonus {
+
+    color: var(--accent);
+
+    font-size: 13px;
+
+    font-weight: 800;
+
+    line-height: 1;
+
+    margin-top: 3px;
+}
+
+.character-ability.ability-mastered {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+
+    box-shadow:
+        0 0 0 1px var(--accent-soft);
+}
+
+
+/* =========================================================
+   EDITOR
+   ========================================================= */
+
+.editor-list {
+
+    display: grid;
+
+    gap: 10px;
+
+    margin-bottom: 10px;
+
+    grid-template-columns: 1fr 1fr;
+
+}
+
+
+.editor-item {
+
+    background: var(--panel2);
+
+    border-radius: 10px;
+
+    padding: 12px;
+
+    display: grid;
+
+    gap: 10px;
+}
+
+
+.editor-item small {
+
+    color: var(--muted);
+
+    display: block;
+
+    margin-top: 3px;
+}
+
+
+.checkbox-row {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+.checkbox-row input {
+
+    width: auto;
+}
+
+
+.image-preview {
+
+    width: 64px;
+
+    height: 64px;
+
+    border-radius: 10px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    overflow: hidden;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+
+.image-preview img {
+
+    width: 64px;
+
+    height: 64px;
+
+    object-fit: cover;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.modal {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 100;
+
+    background: #000b;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 14px;
+}
+
+
+.hidden {
+
+    display: none !important;
+}
+
+
+.modal-content{
+    width:min(620px,100%);
+    max-height:90vh;
+    overflow-y:auto;
+
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:18px;
+
+    padding:24px;
+
+    position:relative;
+
+    box-shadow:0 20px 60px #0008;
+}
+
+
+.close {
+
+    position: absolute;
+
+    right: 10px;
+
+    top: 10px;
+
+    font-size: 20px;
+}
+
+
+.modal-action-image {
+
+    width: 64px;
+
+    height: 64px;
+
+    border-radius: 10px;
+
+    overflow: hidden;
+
+    margin-bottom: 12px;
+}
+
+
+.modal-action-image img {
+
+    width: 64px;
+
+    height: 64px;
+
+    object-fit: cover;
+}
+
+
+.modal-content p {
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   ZOOM
+   ========================================================= */
+
+.zoom-controls {
+
+    position: fixed;
+
+    left: 18px;
+
+    bottom: 18px;
+
+    z-index: 90;
+
+    display: flex;
+
+    gap: 5px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 5px;
+
+    box-shadow:
+        0 5px 25px #0008;
+}
+
+
+.zoom-controls button {
+
+    width: 38px;
+
+    height: 38px;
+
+    padding: 0;
+
+    font-size: 18px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .app {
+
+        padding: 12px;
+    }
+
+
+    .collapse-toggle {
+
+        display: block;
+    }
+
+
+    .character-header {
+
+        padding-bottom: 8px;
+    }
+
+
+    .character-header.collapsed {
+
+        padding-bottom: 4px;
+    }
+
+
+    .character-bar {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+
+    .character-abilities {
+
+        grid-template-columns:
+            repeat(3, 1fr);
+    }
+
+
+    .page-nav {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+
+    .skills,
+    .actions,
+    .form-row {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    .abilities {
+
+        grid-template-columns:
+            repeat(3, 1fr);
+    }
+
+
+    .resources {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    header {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+
+    .header-actions {
+
+        justify-content: flex-start;
+    }
+
+
+    .logo {
+
+        font-size: 34px;
+    }
+
+
+    .app {
+
+        padding-bottom: 90px;
+    }
+
+
+    .zoom-controls {
+
+        right: 12px;
+
+        bottom: 12px;
+    }
+
+
+    .zoom-controls button {
+
+        width: 34px;
+
+        height: 34px;
+
+        font-size: 16px;
+    }
+
+}
+
+
+
+/* =========================================================
+   LABELS
+   ========================================================= */
+
+.label {
+
+    color: var(--muted);
+
+    font-size: 13px;
+}
+
+
+.ability .label {
+
+    font-size: 13px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   FOLDER PANEL
+   ========================================================= */
+
+.folder-panel {
+
+    margin-top: 22px;
+
+    text-align: left;
+}
+
+
+.folder-list {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(150px, 1fr));
+
+    gap: 7px;
+
+    margin-bottom: 10px;
+}
+
+
+.folder-file {
+
+    text-align: left;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+
+.folder-actions {
+
+    display: flex;
+
+    gap: 7px;
+
+    flex-wrap: wrap;
+}
+
+
+/* =========================================================
+   LIST EDITOR
+   ========================================================= */
+
+.list-editor {
+
+    display: grid;
+
+    gap: 6px;
+}
+
+
+.list-row {
+
+    display: grid;
+
+    grid-template-columns: 1fr auto;
+
+    gap: 6px;
+}
+
+
+.editor-list-single {
+
+    grid-template-columns: 1fr;
+}
+
+
+.form-row-3 {
+
+    grid-template-columns:
+        repeat(3, 1fr);
+}
+
+
+textarea.tall {
+
+    min-height: 160px;
+}
+
+
+/* =========================================================
+   RESISTANCES
+   ========================================================= */
+
+.resist-editor {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(170px, 1fr));
+
+    gap: 10px;
+}
+
+
+.resist-label {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+}
+
+
+.resist-icon {
+
+    width: 26px;
+
+    height: 26px;
+
+    object-fit: contain;
+
+    flex-shrink: 0;
+}
+
+
+.resist-grid {
+ 
+    display: flex;
+ 
+    flex-wrap: wrap;
+
+    justify-content: center;
+ 
+    gap: 8px;
+}
+
+
+.resist-case {
+
+    display: grid;
+
+    justify-items: center;
+
+    gap: 3px;
+
+    padding: 8px 4px;
+
+    background: var(--panel2);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    text-align: center;
+
+    box-sizing: border-box;
+
+    min-width: 60px;
+    
+}
+
+.resist-case strong {
+ 
+    font-size: 12px;
+ 
+    line-height: 1.1;
+}
+
+
+.resist-case small {
+
+    color: var(--muted);
+
+    font-size: 11px;
+}
+
+
+.resist-case .resist-icon {
+
+    width: 28px;
+ 
+    height: 28px;
+}
+
+
+.resist-immunite {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+
+    box-shadow:
+        0 0 0 1px var(--accent-soft);
+}
+
+
+.resist-vulnerabilite {
+
+    border-color: var(--danger);
+}
+
+
+/* =========================================================
+   TAGS
+   ========================================================= */
+
+.tag-columns {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 14px;
+}
+
+
+.tag-list {
+
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 6px;
+}
+
+
+.tag {
+
+    padding: 6px 10px;
+
+    background: var(--panel2);
+
+    border: 1px solid var(--border);
+
+    border-radius: 999px;
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   CHARACTER PAGE
+   ========================================================= */
+
+.info-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(6, 1fr);
+
+    gap: 8px;
+}
+
+
+.info-box {
+
+    background: var(--panel2);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 10px;
+
+    text-align: center;
+}
+
+
+.info-box span {
+
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+.info-box strong {
+
+    display: block;
+
+    margin-top: 3px;
+}
+
+
+.text-blocks {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+}
+
+
+.text-block {
+
+    background: var(--panel2);
+
+    border-radius: 12px;
+
+    padding: 12px;
+}
+
+
+.text-block h3 {
+
+    margin-bottom: 6px;
+
+    font-size: 14px;
+
+    color: var(--accent);
+}
+
+
+.text-block p,
+.story {
+
+    margin: 0;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   INVENTORY
+   ========================================================= */
+
+.money-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 8px;
+}
+
+
+.money {
+
+    background: var(--panel2);
+
+    border-radius: 12px;
+
+    padding: 10px;
+
+    text-align: center;
+}
+
+
+.money span {
+
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+.money strong {
+
+    font-size: 20px;
+}
+
+
+.inventory-list {
+
+    display: grid;
+
+    gap: 8px;
+}
+
+
+.inventory-item {
+
+    display: grid;
+
+    grid-template-columns: 1fr auto;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 12px;
+
+    background: var(--panel2);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+}
+
+
+.inventory-item.equipped {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+}
+
+
+.inventory-info small {
+
+    display: block;
+
+    color: var(--muted);
+
+    margin-top: 3px;
+}
+
+
+.inventory-quantity {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+.inventory-quantity button {
+
+    width: 34px;
+
+    padding: 6px 0;
+}
+
+
+/* =========================================================
+   ACTION META
+   ========================================================= */
+
+.action-meta {
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+    margin-bottom: 6px;
+}
+
+
+.combat-calculation {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 8px;
+
+    margin: 12px 0;
+}
+
+
+.calculation-box {
+
+    background: var(--panel2);
+
+    border-radius: 12px;
+
+    padding: 10px;
+
+    text-align: center;
+}
+
+
+.calculation-box strong {
+
+    display: block;
+
+    font-size: 22px;
+
+    color: var(--accent);
+}
+
+
+.calculation-box small {
+
+    color: var(--muted);
+}
+
+
+.spell-filter {
+
+    display: grid;
+
+    gap: 5px;
+
+    margin-top: 12px;
+}
+
+
+.spell-filter label {
+
+    color: var(--muted);
+
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   RESPONSIVE — NEW ISLANDS
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .form-row-3,
+    .tag-columns,
+    .text-blocks,
+    .combat-calculation {
+
+        grid-template-columns: 1fr;
+    }
+
+
+    .info-grid {
+
+        grid-template-columns:
+            repeat(3, 1fr);
+    }
+
+
+    .editor-list {
+
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* =========================================================
+   ACTION CARD WITHOUT IMAGE
+   ========================================================= */
+
+.action-card > .action-info:first-child {
+
+    grid-column: 1 / -1;
+}
+
+/* =========================================================
+   TEXT ALIGNMENT
+   ========================================================= */
+
+.text-block,
+.story {
+
+    text-align: left;
+}
+
+/* =========================================================
+   DAMAGE ROLLER
+   ========================================================= */
+
+.damage-toggle {
+
+    position: fixed;
+
+    left: 18px;
+
+    top: 18px;
+
+    z-index: 90;
+
+    display: flex;
+
+    gap: 5px;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 12px;
+
+    padding: 5px;
+
+    box-shadow:
+        0 5px 25px #0008;
+}
+
+
+.damage-modal {
+
+    text-align: left;
+
+    max-width: 520px;
+}
+
+
+.damage-dice {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(6, 1fr);
+
+    gap: 6px;
+
+    margin-bottom: 12px;
+}
+
+
+.damage-die {
+
+    position: relative;
+
+    padding: 12px 0;
+}
+
+
+.damage-die.selected {
+
+    border-color: var(--accent);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--panel),
+            var(--accent-soft)
+        );
+}
+
+
+.damage-count {
+
+    position: absolute;
+
+    top: 2px;
+
+    right: 4px;
+
+    font-size: 11px;
+
+    color: var(--accent);
+}
+
+
+.damage-bonus {
+
+    display: grid;
+
+    grid-template-columns: auto 1fr;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-bottom: 12px;
+}
+
+
+.damage-bonus label {
+
+    color: var(--muted);
+
+    font-size: 13px;
+}
+
+
+.damage-formula {
+
+    text-align: center;
+
+    font-size: 18px;
+
+    font-weight: 700;
+
+    margin-bottom: 12px;
+}
+
+
+.damage-actions {
+
+    display: flex;
+
+    gap: 7px;
+
+    margin-bottom: 12px;
+}
+
+
+.damage-types {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(130px, 1fr));
+
+    gap: 6px;
+
+    margin-bottom: 12px;
+}
+
+
+.damage-type {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    font-size: 13px;
+}
+
+
+.damage-type-icon {
+
+    width: 20px;
+
+    height: 20px;
+
+    object-fit: contain;
+}
+
+
+.damage-history {
+
+    display: grid;
+
+    gap: 6px;
+
+    margin-bottom: 12px;
+
+    max-height: 240px;
+
+    overflow-y: auto;
+}
+
+
+.damage-entry {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 8px 10px;
+
+    background: var(--panel2);
+
+    border-radius: 10px;
+
+    font-size: 15px;
+}
+
+
+.damage-entry strong {
+
+    font-size: 18px;
+}
+
+
+.damage-entry-formula {
+
+    opacity: 0.85;
+}
+
+
+.damage-entry-icon {
+
+    width: 22px;
+
+    height: 22px;
+
+    object-fit: contain;
+
+    margin-left: auto;
+}
