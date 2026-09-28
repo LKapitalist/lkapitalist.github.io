@@ -440,7 +440,7 @@ function home() {
                 ></div>
 
                 <p class="update">
-                    V8.3
+                    V9
                 </p>
 
             </div>
@@ -3563,7 +3563,7 @@ function sheet() {
         </div>
 
         <p class="update">
-            V8.3
+            V9
         </p>
 
     `;
@@ -6713,7 +6713,7 @@ function companionSheet() {
         </div>
 
         <p class="update">
-            V8.3
+            V9
         </p>
 
     `;
