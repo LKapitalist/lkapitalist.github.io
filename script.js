@@ -255,7 +255,7 @@ const blankCharacter = () => ({
     resources: [
         { key: "action", name: "Action", value: 1, max: 1, icon: "", fixed: true },
         { key: "bonus", name: "Action bonus", value: 1, max: 1, icon: "", fixed: true },
-        { key: "reaction", name: "Reaction", value: 1, max: 1, icon: "", fixed: true }
+        { key: "reaction", name: "Réaction", value: 1, max: 1, icon: "", fixed: true }
     ],
 
     proficiencyBonus: 2,
@@ -450,7 +450,7 @@ function home() {
                 ></div>
 
                 <p class="update">
-                    V10.4.1
+                    V10.6.1.1
                 </p>
 
             </div>
@@ -1366,7 +1366,7 @@ function normalize() {
         const old = oldResources.find(resource => resource.key === base.key) || {};
         const max = Math.max(0, Number(old.max ?? old.value ?? base.max));
         const value = Math.max(0, Math.min(Number(old.value ?? max), max));
-        return { ...base, ...old, max, value, fixed: true };
+        return { ...base, ...old, name: base.name, max, value, fixed: true };
     });
     const customResources = oldResources
         .filter(resource => !["action", "bonus", "reaction", "other1"].includes(resource.key))
@@ -1374,7 +1374,7 @@ function normalize() {
             const max = Math.max(0, Number(resource.max ?? resource.value ?? 0));
             return {
                 key: resource.key || `custom_${i}_${Date.now()}`,
-                name: resource.name || "Ressource",
+                name: String(resource.name || "Ressource").replace(/^Ressource\s+/i, "").trim() || "Ressource",
                 value: Math.max(0, Math.min(Number(resource.value ?? max), max)),
                 max,
                 icon: resource.icon || "",
@@ -1386,7 +1386,7 @@ function normalize() {
         const max = Math.max(0, Number(legacyOther.max ?? legacyOther.value ?? 0));
         customResources.push({
             key: "custom_legacy",
-            name: legacyOther.name || "Ressource",
+            name: String(legacyOther.name || "Ressource").replace(/^Ressource\s+/i, "").trim() || "Ressource",
             value: Math.max(0, Math.min(Number(legacyOther.value ?? max), max)),
             max,
             icon: legacyOther.icon || "",
@@ -2717,6 +2717,19 @@ function removeCustomResource(index) {
     character.resources.splice(index, 1);
     renderResourceEditor();
 }
+function resourceDisplayName(resource) {
+    const fixedNames = {
+        action: "Action",
+        bonus: "Action bonus",
+        reaction: "Réaction"
+    };
+    if (resource?.fixed && fixedNames[resource.key]) {
+        return fixedNames[resource.key];
+    }
+    return String(resource?.name || "")
+        .replace(/^Ressource\s+/i, "")
+        .trim();
+}
 function renderResourceEditor() {
     const el = document.getElementById("editorResources");
     if (!el) {
@@ -2727,7 +2740,7 @@ function renderResourceEditor() {
             <div class="form-row form-row-3">
                 <div class="field">
                     <label>Nom</label>
-                    <input value="${esc(resource.name)}" ${resource.fixed ? "disabled" : `oninput="character.resources[${i}].name = this.value"`}>
+                    <input value="${esc(resourceDisplayName(resource))}" ${resource.fixed ? "disabled" : `oninput="character.resources[${i}].name = this.value"`}>
                 </div>
                 <div class="field">
                     <label>Nombre maximum</label>
@@ -3740,7 +3753,7 @@ function sheet() {
         </div>
 
         <p class="update">
-            V10.4.1
+            V10.6.1.1
         </p>
 
     `;
@@ -4226,7 +4239,7 @@ function renderCharacterResources() {
     const c = character;
     const entries = [
         ...c.resources.map(resource => ({
-            name: resource.name,
+            name: resourceDisplayName(resource),
             value: resource.fixed
                 ? resource.value
                 : `${resource.value} / ${resource.max}`,
@@ -6968,7 +6981,7 @@ function companionSheet() {
         </div>
 
         <p class="update">
-            V10.4.1
+            V10.6.1.1
         </p>
 
     `;
