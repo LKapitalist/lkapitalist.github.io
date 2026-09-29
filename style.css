@@ -2652,3 +2652,40 @@ button.character-resource {
 .resource-case.resource-editable:hover {
     filter: brightness(1.12);
 }
+
+
+/* Dégâts multiples par action */
+.action-damages {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0;
+}
+.action-damages .action-damage {
+    margin: 0;
+}
+.damage-entry-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.damage-entry {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 2px;
+}
+.damage-entry .damage-entry-edit {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.damage-entry .damage-entry-remove {
+    padding: 0 10px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.action-damage-name {
+    font-size: 13px;
+    font-weight: 600;
+}

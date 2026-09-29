@@ -255,7 +255,7 @@ const blankCharacter = () => ({
     resources: [
         { key: "action", name: "Action", value: 1, max: 1, icon: "", fixed: true },
         { key: "bonus", name: "Action bonus", value: 1, max: 1, icon: "", fixed: true },
-        { key: "reaction", name: "Réaction", value: 1, max: 1, icon: "", fixed: true }
+        { key: "reaction", name: "Reaction", value: 1, max: 1, icon: "", fixed: true }
     ],
 
     proficiencyBonus: 2,
@@ -385,6 +385,12 @@ const blankCompanion = () => ({
     languages: [],
     senses: [],
 
+    resources: [
+        { key: "action", name: "Action", value: 1, max: 1, icon: "", fixed: true },
+        { key: "bonus", name: "Action bonus", value: 1, max: 1, icon: "", fixed: true },
+        { key: "reaction", name: "Réaction", value: 1, max: 1, icon: "", fixed: true }
+    ],
+
     actions: []
 });
 
@@ -450,7 +456,7 @@ function home() {
                 ></div>
 
                 <p class="update">
-                    V10.6.1.1
+                    V10.6
                 </p>
 
             </div>
@@ -1316,8 +1322,8 @@ function normalize() {
             level:
                 action.level ?? "",
 
-            damage:
-                normalizeActionDamage(action.damage),
+            damages:
+                normalizeActionDamages(action),
             attackRoll:
                 normalizeAttackRoll(action.attackRoll),
 
@@ -1366,7 +1372,7 @@ function normalize() {
         const old = oldResources.find(resource => resource.key === base.key) || {};
         const max = Math.max(0, Number(old.max ?? old.value ?? base.max));
         const value = Math.max(0, Math.min(Number(old.value ?? max), max));
-        return { ...base, ...old, name: base.name, max, value, fixed: true };
+        return { ...base, ...old, max, value, fixed: true };
     });
     const customResources = oldResources
         .filter(resource => !["action", "bonus", "reaction", "other1"].includes(resource.key))
@@ -1374,7 +1380,7 @@ function normalize() {
             const max = Math.max(0, Number(resource.max ?? resource.value ?? 0));
             return {
                 key: resource.key || `custom_${i}_${Date.now()}`,
-                name: String(resource.name || "Ressource").replace(/^Ressource\s+/i, "").trim() || "Ressource",
+                name: cleanResourceName(resource.name || "Ressource"),
                 value: Math.max(0, Math.min(Number(resource.value ?? max), max)),
                 max,
                 icon: resource.icon || "",
@@ -1386,7 +1392,7 @@ function normalize() {
         const max = Math.max(0, Number(legacyOther.max ?? legacyOther.value ?? 0));
         customResources.push({
             key: "custom_legacy",
-            name: String(legacyOther.name || "Ressource").replace(/^Ressource\s+/i, "").trim() || "Ressource",
+            name: legacyOther.name || "Ressource",
             value: Math.max(0, Math.min(Number(legacyOther.value ?? max), max)),
             max,
             icon: legacyOther.icon || "",
@@ -1413,14 +1419,57 @@ function normalizeActionDamage(damage) {
             type: DAMAGE_TYPES[damage.type] ? damage.type : "feu"
         };
     }
-    const match = String(damage || "").match(/(\d+)d(4|6|8|10|12|20)(?:\s*([+\-])\s*(\d+))?/i);
+    const text = String(damage || "");
+    const match = text.match(/(\d+)d(4|6|8|10|12|20)(?:\s*([+\-])\s*(\d+))?/i);
+    const plain = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const detectedType = Object.keys(DAMAGE_TYPES).find(key => plain.includes(key));
     return {
         enabled: Boolean(match),
         count: match ? Number(match[1]) : 1,
         die: match ? Number(match[2]) : 6,
         bonus: match && match[4] ? Number(match[4]) * (match[3] === "-" ? -1 : 1) : 0,
-        type: "feu"
+        type: detectedType || "feu"
     };
+}
+
+function normalizeDamageEntry(d) {
+    return {
+        count: Math.max(1, Number(d?.count || 1)),
+        die: DAMAGE_DICE.includes(Number(d?.die)) ? Number(d.die) : 6,
+        bonus: Number(d?.bonus || 0),
+        type: DAMAGE_TYPES[d?.type] ? d.type : "feu"
+    };
+}
+
+function parseLegacyDamageText(text) {
+    const source = String(text || "");
+    const strip = value => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const matches = [...source.matchAll(/(\d+)d(4|6|8|10|12|20)(?:\s*([+\-−])\s*(\d+))?/gi)];
+    const fallback = Object.keys(DAMAGE_TYPES).find(key => strip(source).includes(key)) || "feu";
+    return matches.map((m, k) => {
+        const end = m.index + m[0].length;
+        const next = matches[k + 1] ? matches[k + 1].index : source.length;
+        const segment = strip(source.slice(end, next));
+        const type = Object.keys(DAMAGE_TYPES).find(key => segment.includes(key)) || fallback;
+        const sign = m[3] === "-" || m[3] === "−" ? -1 : 1;
+        return normalizeDamageEntry({
+            count: Number(m[1]),
+            die: Number(m[2]),
+            bonus: m[4] ? Number(m[4]) * sign : 0,
+            type
+        });
+    });
+}
+
+function normalizeActionDamages(action) {
+    if (Array.isArray(action?.damages)) {
+        return action.damages.map(normalizeDamageEntry);
+    }
+    const legacy = action?.damage;
+    if (legacy && typeof legacy === "object") {
+        return legacy.enabled === true ? [normalizeDamageEntry(legacy)] : [];
+    }
+    return parseLegacyDamageText(legacy);
 }
 
 function normalizeAttackRoll(attackRoll) {
@@ -1445,16 +1494,28 @@ function damageDieIcon(die, type) {
         : (DAMAGE_TYPES[type] || type);
     return `icons/dice/D${dieNumber}_${damageName}.png`;
 }
-function renderDamageValue(damage) {
-    if (!damage?.enabled) {
-        return "";
-    }
+function renderDamageEntry(damage) {
     const color = `var(--damage-${damage.type}, ${DAMAGE_COLORS[damage.type] || "var(--accent)"})`;
     const dice = Array.from({ length: Math.max(1, Number(damage.count || 1)) }, () =>
         `<img src="${damageDieIcon(damage.die, damage.type)}" class="action-damage-die" alt="">`
     ).join("");
     const bonus = Number(damage.bonus || 0);
-    return `<div class="damage action-damage" style="color:${color}">${dice}<span>${damage.count}d${damage.die}${bonus ? ` ${bonus > 0 ? "+" : "−"} ${Math.abs(bonus)}` : ""}</span><img src="icons/resistances/${damage.type}.png" class="action-damage-type" alt=""></div>`;
+    return `<div class="damage action-damage" style="color:${color}">${dice}<span>${damage.count}d${damage.die}${bonus ? ` ${bonus > 0 ? "+" : "−"} ${Math.abs(bonus)}` : ""}</span><img src="icons/resistances/${damage.type}.png" class="action-damage-type" alt=""><span class="action-damage-name">${DAMAGE_TYPES[damage.type] || damage.type}</span></div>`;
+}
+function renderDamageValue(damages) {
+    const list = Array.isArray(damages)
+        ? damages
+        : (damages?.enabled ? [damages] : []);
+    if (!list.length) {
+        return "";
+    }
+    return `<div class="action-damages">${list.map(renderDamageEntry).join("")}</div>`;
+}
+
+function normalizeCompanionCost(cost) {
+    const aliases = { "Action Bonus": "Action bonus", "Reaction": "Réaction" };
+    const normalized = aliases[cost] || cost;
+    return COMPANION_COSTS.includes(normalized) ? normalized : "Action";
 }
 
 function normalizeCost(cost) {
@@ -1473,6 +1534,11 @@ function normalizeCost(cost) {
    NORMALIZE COMPANION
    ========================================================= */
 
+function cleanResourceName(name) {
+    return String(name || "")
+        .replace(/^Ressource\s+/i, "")
+        .trim() || "Ressource";
+}
 function normalizeCompanion() {
 
     const b = blankCompanion();
@@ -1543,6 +1609,29 @@ function normalizeCompanion() {
     }
 
 
+    const oldResources = Array.isArray(companion.resources)
+        ? companion.resources
+        : [];
+    const fixedResources = b.resources.map(base => {
+        const old = oldResources.find(resource => resource.key === base.key) || {};
+        const max = Math.max(0, Number(old.max ?? old.value ?? base.max));
+        const value = Math.max(0, Math.min(Number(old.value ?? max), max));
+        return { ...base, ...old, name: base.name, max, value, fixed: true };
+    });
+    const customResources = oldResources
+        .filter(resource => !["action", "bonus", "reaction"].includes(resource.key))
+        .map((resource, i) => {
+            const max = Math.max(0, Number(resource.max ?? resource.value ?? 0));
+            return {
+                key: resource.key || `comp_custom_${i}_${Date.now()}`,
+                name: cleanResourceName(resource.name || "Ressource"),
+                value: Math.max(0, Math.min(Number(resource.value ?? max), max)),
+                max,
+                icon: resource.icon || "",
+                fixed: false
+            };
+        });
+    companion.resources = [...fixedResources, ...customResources];
     companion.actions =
         companion.actions.map(action => ({
 
@@ -1551,12 +1640,13 @@ function normalizeCompanion() {
                 "Nouvelle action",
 
             cost:
-                COMPANION_COSTS.includes(action.cost)
-                    ? action.cost
-                    : "Action",
+                normalizeCompanionCost(action.cost),
 
-            damage:
-                action.damage || "",
+            damages:
+                normalizeActionDamages(action),
+
+            attackRoll:
+                normalizeAttackRoll(action.attackRoll),
 
             description:
                 action.description || "",
@@ -2717,19 +2807,6 @@ function removeCustomResource(index) {
     character.resources.splice(index, 1);
     renderResourceEditor();
 }
-function resourceDisplayName(resource) {
-    const fixedNames = {
-        action: "Action",
-        bonus: "Action bonus",
-        reaction: "Réaction"
-    };
-    if (resource?.fixed && fixedNames[resource.key]) {
-        return fixedNames[resource.key];
-    }
-    return String(resource?.name || "")
-        .replace(/^Ressource\s+/i, "")
-        .trim();
-}
 function renderResourceEditor() {
     const el = document.getElementById("editorResources");
     if (!el) {
@@ -2740,7 +2817,7 @@ function renderResourceEditor() {
             <div class="form-row form-row-3">
                 <div class="field">
                     <label>Nom</label>
-                    <input value="${esc(resourceDisplayName(resource))}" ${resource.fixed ? "disabled" : `oninput="character.resources[${i}].name = this.value"`}>
+                    <input value="${esc(resource.name)}" ${resource.fixed ? "disabled" : `oninput="character.resources[${i}].name = this.value"`}>
                 </div>
                 <div class="field">
                     <label>Nombre maximum</label>
@@ -2785,7 +2862,9 @@ function addActionForm() {
 
         level: "",
 
-        damage: "",
+        damages: [],
+
+        attackRoll: normalizeAttackRoll(),
 
         description: "",
 
@@ -2810,6 +2889,12 @@ function addActionForm() {
 
 
 function renderEditorActions() {
+
+    character.actions.forEach(action => {
+        action.damages = normalizeActionDamages(action);
+        delete action.damage;
+        action.attackRoll = normalizeAttackRoll(action.attackRoll);
+    });
 
     const el =
         document.getElementById(
@@ -2939,10 +3024,7 @@ function renderEditorActions() {
                             <label class="checkbox-row"><input type="checkbox" ${x.attackRoll?.enabled ? "checked" : ""} onchange="character.actions[${i}].attackRoll.enabled = this.checked; renderEditorActions();">Jet d'attaque</label>
                             ${x.attackRoll?.enabled ? `<button type="button" onclick="openAttackRollEditor(${i})">1d20 ${Number(x.attackRoll.bonus || 0) >= 0 ? "+" : "−"} ${Math.abs(Number(x.attackRoll.bonus || 0))}</button>` : ""}
                         </div>
-                        <div class="field damage-editor-field">
-                            <label class="checkbox-row"><input type="checkbox" ${x.damage?.enabled ? "checked" : ""} onchange="character.actions[${i}].damage.enabled = this.checked; renderEditorActions();">Dégâts</label>
-                            ${x.damage?.enabled ? `<button type="button" onclick="openActionDamageEditor(${i})">${x.damage.count}d${x.damage.die}${Number(x.damage.bonus || 0) ? ` ${Number(x.damage.bonus) > 0 ? "+" : "−"} ${Math.abs(Number(x.damage.bonus))}` : ""} · ${DAMAGE_TYPES[x.damage.type]}</button>` : ""}
-                        </div>
+                        ${renderDamageEditorField("character", i, x)}
                         <div class="field">
 
                             <label>Image</label>
@@ -3258,8 +3340,99 @@ function renderEditorActions() {
 
 function openAttackRollEditor(index) { const a=character.actions[index].attackRoll; document.body.insertAdjacentHTML("beforeend", `<div id="actionConfigModal" class="modal" onclick="closeActionConfigModal(event)"><div class="modal-content action-config-modal"><button class="close" onclick="closeActionConfigModal()">×</button><h2>Jet d'attaque</h2><div class="action-config-form"><div class="action-config-fixed-die">1d20</div><div class="field"><label>Bonus</label><input id="attackRollBonus" type="number" value="${a.bonus}"></div></div><div class="action-config-actions"><button onclick="closeActionConfigModal()">Annuler</button><button class="primary" onclick="saveAttackRollEditor(${index})">Valider</button></div></div></div>`); }
 function saveAttackRollEditor(index) { character.actions[index].attackRoll.bonus=Number(document.getElementById("attackRollBonus").value)||0; closeActionConfigModal(); renderEditorActions(); }
-function openActionDamageEditor(index) { const d=character.actions[index].damage; document.body.insertAdjacentHTML("beforeend", `<div id="actionConfigModal" class="modal" onclick="closeActionConfigModal(event)"><div class="modal-content action-config-modal"><button class="close" onclick="closeActionConfigModal()">×</button><h2>Configurer les dégâts</h2><div class="action-config-grid"><div class="field"><label>Nombre de dés</label><input id="actionDamageCount" type="number" min="1" value="${d.count}"></div><div class="field"><label>Dé</label><select id="actionDamageDie">${DAMAGE_DICE.map(n=>`<option value="${n}" ${d.die===n?"selected":""}>d${n}</option>`).join("")}</select></div><div class="field"><label>Bonus</label><input id="actionDamageBonus" type="number" value="${d.bonus}"></div><div class="field"><label>Type de dégâts</label><select id="actionDamageType">${Object.entries(DAMAGE_TYPES).map(([k,l])=>`<option value="${k}" ${d.type===k?"selected":""}>${l}</option>`).join("")}</select></div></div><div class="action-config-actions"><button onclick="closeActionConfigModal()">Annuler</button><button class="primary" onclick="saveActionDamageEditor(${index})">Valider</button></div></div></div>`); }
-function saveActionDamageEditor(index) { const d=character.actions[index].damage; d.count=Math.max(1,Number(document.getElementById("actionDamageCount").value)||1); d.die=Number(document.getElementById("actionDamageDie").value)||6; d.bonus=Number(document.getElementById("actionDamageBonus").value)||0; d.type=document.getElementById("actionDamageType").value; closeActionConfigModal(); renderEditorActions(); }
+function damageActionList(kind) {
+    return kind === "companion" ? companion.actions : character.actions;
+}
+function refreshActionEditor(kind) {
+    if (kind === "companion") {
+        renderCompanionEditorActions();
+    } else {
+        renderEditorActions();
+    }
+}
+function formatDamageEntry(d) {
+    const bonus = Number(d.bonus || 0);
+    return `${d.count}d${d.die}${bonus ? ` ${bonus > 0 ? "+" : "−"} ${Math.abs(bonus)}` : ""} · ${DAMAGE_TYPES[d.type] || d.type}`;
+}
+function renderDamageEditorField(kind, i, x) {
+    const entries = (x.damages || []).map((d, j) => `
+        <div class="damage-entry">
+            <button type="button" class="damage-entry-edit" onclick="openDamageEntryEditor('${kind}', ${i}, ${j}, false)">${formatDamageEntry(d)}</button>
+            <button type="button" class="damage-entry-remove danger" title="Retirer ces dégâts" onclick="removeDamageEntry('${kind}', ${i}, ${j})">×</button>
+        </div>
+    `).join("");
+    return `
+        <div class="field damage-editor-field" style="grid-column:1/-1">
+            <label>Dégâts</label>
+            <div class="damage-entry-list">
+                ${entries}
+                <button type="button" onclick="addDamageEntry('${kind}', ${i})">+ Ajouter des dégâts</button>
+            </div>
+        </div>
+    `;
+}
+function addDamageEntry(kind, i) {
+    const action = damageActionList(kind)[i];
+    if (!action) {
+        return;
+    }
+    action.damages = action.damages || [];
+    action.damages.push({ count: 1, die: 6, bonus: 0, type: "tranchant" });
+    openDamageEntryEditor(kind, i, action.damages.length - 1, true);
+}
+function removeDamageEntry(kind, i, j) {
+    const action = damageActionList(kind)[i];
+    if (!action?.damages) {
+        return;
+    }
+    action.damages.splice(j, 1);
+    refreshActionEditor(kind);
+}
+function openDamageEntryEditor(kind, i, j, isNew) {
+    const d = damageActionList(kind)[i]?.damages?.[j];
+    if (!d) {
+        return;
+    }
+    document.getElementById("actionConfigModal")?.remove();
+    const cancel = `cancelDamageEntry('${kind}', ${i}, ${j}, ${isNew ? "true" : "false"})`;
+    document.body.insertAdjacentHTML("beforeend", `
+        <div id="actionConfigModal" class="modal" onclick="if (event.target.id === 'actionConfigModal') ${cancel}">
+            <div class="modal-content action-config-modal">
+                <button class="close" onclick="${cancel}">×</button>
+                <h2>${isNew ? "Ajouter des dégâts" : "Configurer les dégâts"}</h2>
+                <div class="action-config-grid">
+                    <div class="field"><label>Nombre de dés</label><input id="damageEntryCount" type="number" min="1" value="${d.count}"></div>
+                    <div class="field"><label>Dé</label><select id="damageEntryDie">${DAMAGE_DICE.map(n => `<option value="${n}" ${d.die === n ? "selected" : ""}>d${n}</option>`).join("")}</select></div>
+                    <div class="field"><label>Bonus</label><input id="damageEntryBonus" type="number" value="${d.bonus}"></div>
+                    <div class="field"><label>Type de dégâts</label><select id="damageEntryType">${Object.entries(DAMAGE_TYPES).map(([k, l]) => `<option value="${k}" ${d.type === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+                </div>
+                <div class="action-config-actions">
+                    <button onclick="${cancel}">Annuler</button>
+                    <button class="primary" onclick="saveDamageEntry('${kind}', ${i}, ${j})">Valider</button>
+                </div>
+            </div>
+        </div>
+    `);
+}
+function cancelDamageEntry(kind, i, j, isNew) {
+    if (isNew) {
+        damageActionList(kind)[i]?.damages?.splice(j, 1);
+    }
+    closeActionConfigModal();
+    refreshActionEditor(kind);
+}
+function saveDamageEntry(kind, i, j) {
+    const d = damageActionList(kind)[i]?.damages?.[j];
+    if (!d) {
+        return;
+    }
+    d.count = Math.max(1, Number(document.getElementById("damageEntryCount").value) || 1);
+    d.die = Number(document.getElementById("damageEntryDie").value) || 6;
+    d.bonus = Number(document.getElementById("damageEntryBonus").value) || 0;
+    d.type = document.getElementById("damageEntryType").value;
+    closeActionConfigModal();
+    refreshActionEditor(kind);
+}
 function closeActionConfigModal(event) { if(event&&event.target.id!=="actionConfigModal")return; document.getElementById("actionConfigModal")?.remove(); }
 function readImageFile(input, callback) {
     const file = input.files?.[0];
@@ -3753,7 +3926,7 @@ function sheet() {
         </div>
 
         <p class="update">
-            V10.6.1.1
+            V10.6
         </p>
 
     `;
@@ -4239,7 +4412,7 @@ function renderCharacterResources() {
     const c = character;
     const entries = [
         ...c.resources.map(resource => ({
-            name: resourceDisplayName(resource),
+            name: resource.name,
             value: resource.fixed
                 ? resource.value
                 : `${resource.value} / ${resource.max}`,
@@ -5024,7 +5197,7 @@ function renderSpellCard(x) {
 
 
                 ${renderAttackRoll(x.attackRoll)}
-                ${renderDamageValue(x.damage)}
+                ${renderDamageValue(x.damages)}
 
                 <button
                     class="primary"
@@ -5711,7 +5884,7 @@ function renderActionCard(x) {
 
 
                 ${renderAttackRoll(x.attackRoll)}
-                ${renderDamageValue(x.damage)}
+                ${renderDamageValue(x.damages)}
 
                 <button
                     class="primary"
@@ -6004,7 +6177,7 @@ function showAction(i) {
 
 
                 ${renderAttackRoll(x.attackRoll)}
-                ${renderDamageValue(x.damage)}
+                ${renderDamageValue(x.damages)}
 
 
                 <p>
@@ -6163,6 +6336,11 @@ function companionEditor() {
             </div>
 
 
+            <div class="card">
+                <h2>Ressources</h2>
+                <div id="editorCompanionResources" class="editor-list editor-list-single"></div>
+                <button onclick="addCompanionCustomResource()">+ Ajouter une ressource personnalisée</button>
+            </div>
             <div class="card">
 
                 <h2>Combat</h2>
@@ -6429,193 +6607,49 @@ function companionEditor() {
    COMPANION ACTION FORM
    ========================================================= */
 
+function addCompanionCustomResource() {
+    companion.resources.push({ key: `comp_custom_${Date.now()}`, name: "Nouvelle ressource", value: 1, max: 1, icon: "", fixed: false });
+    renderCompanionResourceEditor();
+}
+function removeCompanionCustomResource(index) {
+    if (!companion.resources[index] || companion.resources[index].fixed) return;
+    companion.resources.splice(index, 1);
+    renderCompanionResourceEditor();
+}
+function renderCompanionResourceEditor() {
+    const el = document.getElementById("editorCompanionResources");
+    if (!el) return;
+    el.innerHTML = companion.resources.map((resource, i) => `
+        <div class="editor-item"><div class="form-row form-row-3">
+            <div class="field"><label>Nom</label><input value="${esc(cleanResourceName(resource.name))}" ${resource.fixed ? "disabled" : `oninput="companion.resources[${i}].name=cleanResourceName(this.value)"`}></div>
+            <div class="field"><label>Nombre maximum</label><input type="number" min="0" value="${resource.max}" oninput="setCompanionResourceMaximum(${i},this.value)"></div>
+            <div class="field"><label>Icône</label>${resource.fixed ? `<div class="resource-icon-source"><img src="${fixedResourceIcon(resource.key)}" class="resource-editor-icon" alt=""></div>` : `<input type="file" accept="image/*" onchange="handleCompanionResourceIconUpload(${i},this)">${resource.icon ? `<div class="image-preview"><img src="${resource.icon}"></div>` : ""}`}</div>
+        </div>${resource.fixed ? "" : `<button class="danger" onclick="removeCompanionCustomResource(${i})">Supprimer</button>`}</div>`).join("");
+}
+function setCompanionResourceMaximum(index,value) {
+    const resource=companion.resources[index]; if(!resource)return; resource.max=Math.max(0,Number(value)||0); resource.value=resource.max;
+}
+function handleCompanionResourceIconUpload(index,input) {
+    readImageFile(input,result=>{ companion.resources[index].icon=result; renderCompanionResourceEditor(); });
+}
 function addCompanionActionForm() {
-
-    companion.actions.push({
-
-        name: "Nouvelle action",
-
-        cost: "Action",
-
-        damage: "",
-
-        description: "",
-
-        image: ""
-
-    });
-
+    companion.actions.push({ name:"Nouvelle action", cost:"Action", attackRoll:{enabled:false,bonus:0}, damages:[], description:"", image:"" });
     renderCompanionEditorActions();
 }
-
-
 function renderCompanionEditorActions() {
-
-    const el =
-        document.getElementById(
-            "editorCompanionActions"
-        );
-
-    if (!el) {
-        return;
-    }
-
-    el.innerHTML =
-        companion.actions
-        .map(
-            (x, i) => `
-
-                <div class="editor-item">
-
-                    <div class="form-row">
-
-                        <div class="field">
-
-                            <label>Nom</label>
-
-                            <input
-                                data-c="${i}"
-                                data-k="name"
-                                value="${esc(x.name)}"
-                            >
-
-                        </div>
-
-
-                        <div class="field">
-
-                            <label>Type</label>
-
-                            <select
-                                data-c="${i}"
-                                data-k="cost"
-                            >
-
-                                ${COMPANION_COSTS
-                                .map(
-                                    cost => `
-                                        <option
-                                            value="${cost}"
-                                            ${
-                                                x.cost === cost
-                                                ? "selected"
-                                                : ""
-                                            }
-                                        >
-                                            ${cost}
-                                        </option>
-                                    `
-                                )
-                                .join("")}
-
-                            </select>
-
-                        </div>
-
-
-                        <div class="field">
-
-                            <label>Dégâts</label>
-
-                            <input
-                                data-c="${i}"
-                                data-k="damage"
-                                placeholder="1d6 + 2"
-                                value="${esc(x.damage)}"
-                            >
-
-                        </div>
-
-
-                        <div class="field">
-
-                            <label>Image</label>
-
-                            <input
-                                type="file"
-                                accept="image/*"
-                                onchange="
-                                    handleCompanionImageUpload(
-                                        ${i},
-                                        this
-                                    )
-                                "
-                            >
-
-                            ${
-                                x.image
-                                ?
-                                `
-                                    <div class="image-preview">
-
-                                        <img
-                                            src="${x.image}"
-                                        >
-
-                                    </div>
-                                `
-                                :
-                                ""
-                            }
-
-                        </div>
-
-
-                        <div
-                            class="field"
-                            style="grid-column:1/-1"
-                        >
-
-                            <label>Description</label>
-
-                            <textarea
-                                data-c="${i}"
-                                data-k="description"
-                            >${esc(x.description)}</textarea>
-
-                        </div>
-
-                    </div>
-
-
-                    <button
-                        class="danger"
-                        onclick="
-                            companion.actions.splice(${i}, 1);
-                            renderCompanionEditorActions();
-                        "
-                    >
-                        Supprimer
-                    </button>
-
-                </div>
-
-            `
-        )
-        .join("");
-
-
-    el
-        .querySelectorAll("[data-c][data-k]")
-        .forEach(input => {
-
-            input.addEventListener(
-                "input",
-                () => {
-
-                    companion.actions[
-                        Number(input.dataset.c)
-                    ][
-                        input.dataset.k
-                    ] = input.value;
-
-                }
-            );
-
-        });
+ companion.actions.forEach(action=>{action.damages=normalizeActionDamages(action);delete action.damage;action.attackRoll=normalizeAttackRoll(action.attackRoll);action.cost=normalizeCompanionCost(action.cost);});
+ const el=document.getElementById("editorCompanionActions"); if(!el)return;
+ el.innerHTML=companion.actions.map((x,i)=>`<div class="editor-item"><div class="form-row">
+ <div class="field"><label>Nom</label><input data-c="${i}" data-k="name" value="${esc(x.name)}"></div>
+ <div class="field"><label>Type</label><select data-c="${i}" data-k="cost">${COMPANION_COSTS.map(cost=>`<option value="${cost}" ${x.cost===cost?"selected":""}>${cost}</option>`).join("")}</select></div>
+ <div class="field"><label class="checkbox-row"><input type="checkbox" ${x.attackRoll?.enabled?"checked":""} onchange="companion.actions[${i}].attackRoll.enabled=this.checked;renderCompanionEditorActions();">Jet d'attaque</label>${x.attackRoll?.enabled?`<button type="button" onclick="openCompanionAttackRollEditor(${i})">1d20 ${Number(x.attackRoll.bonus||0)>=0?"+":"−"} ${Math.abs(Number(x.attackRoll.bonus||0))}</button>`:""}</div>
+ ${renderDamageEditorField("companion",i,x)}
+ <div class="field"><label>Image</label><input type="file" accept="image/*" onchange="handleCompanionImageUpload(${i},this)">${x.image?`<div class="image-preview"><img src="${x.image}"></div>`:""}</div>
+ <div class="field" style="grid-column:1/-1"><label>Description</label><textarea data-c="${i}" data-k="description">${esc(x.description)}</textarea></div></div><button class="danger" onclick="companion.actions.splice(${i},1);renderCompanionEditorActions();">Supprimer</button></div>`).join("");
+ el.querySelectorAll("[data-c][data-k]").forEach(input=>input.addEventListener("input",()=>{companion.actions[Number(input.dataset.c)][input.dataset.k]=input.value;}));
 }
-
-
+function openCompanionAttackRollEditor(index){const a=companion.actions[index].attackRoll;document.body.insertAdjacentHTML("beforeend",`<div id="actionConfigModal" class="modal" onclick="closeActionConfigModal(event)"><div class="modal-content action-config-modal"><button class="close" onclick="closeActionConfigModal()">×</button><h2>Jet d'attaque</h2><div class="action-config-form"><div class="action-config-fixed-die">1d20</div><div class="field"><label>Bonus</label><input id="compAttackBonus" type="number" value="${a.bonus}"></div></div><div class="action-config-actions"><button onclick="closeActionConfigModal()">Annuler</button><button class="primary" onclick="saveCompanionAttackRollEditor(${index})">Valider</button></div></div></div>`)}
+function saveCompanionAttackRollEditor(index){companion.actions[index].attackRoll.bonus=Number(document.getElementById("compAttackBonus").value)||0;closeActionConfigModal();renderCompanionEditorActions()}
 function handleCompanionImageUpload(index, input) {
 
     const file =
@@ -6981,7 +7015,7 @@ function companionSheet() {
         </div>
 
         <p class="update">
-            V10.6.1.1
+            V10.6
         </p>
 
     `;
@@ -7155,6 +7189,7 @@ function renderCompanionActionsPage() {
     const c = companion;
 
     return `
+        ${renderCompanionResources()}
 
         ${renderCompanionActionIsland(
             "Actions",
@@ -7163,12 +7198,12 @@ function renderCompanionActionsPage() {
 
         ${renderCompanionActionIsland(
             "Actions bonus",
-            c.actions.filter(x => x.cost === "Action Bonus")
+            c.actions.filter(x => x.cost === "Action bonus")
         )}
 
         ${renderCompanionActionIsland(
             "Réactions",
-            c.actions.filter(x => x.cost === "Reaction")
+            c.actions.filter(x => x.cost === "Réaction")
         )}
 
         ${renderCompanionActionIsland(
@@ -7180,6 +7215,14 @@ function renderCompanionActionsPage() {
 }
 
 
+function renderCompanionResources() {
+    const c=companion;
+    const entries=[...c.resources.map(resource=>({name:cleanResourceName(resource.name),value:resource.fixed?resource.value:`${resource.value} / ${resource.max}`,icon:resource.fixed?fixedResourceIcon(resource.key):resource.icon,index:c.resources.indexOf(resource),editable:!resource.fixed})),{name:"Déplacement",value:`${c.speed} m`,icon:"icons/ressources/Deplacement.png",index:-1,editable:false}];
+    return `<div class="card"><h2>Ressources</h2><div class="resist-grid">${entries.map(resource=>`<div class="resist-case resource-case ${resource.editable?"resource-editable":""}" ${resource.editable?`onclick="openCompanionResourceEditor(${resource.index})"`:""}>${resource.icon?`<img src="${resource.icon}" class="resist-icon" alt="">`:""}<strong>${esc(resource.name)}</strong><small>${resource.value}</small></div>`).join("")}</div></div>`;
+}
+function openCompanionResourceEditor(index){const resource=companion.resources[index];if(!resource||resource.fixed)return;const overlay=document.createElement("div");overlay.className="hp-editor-overlay";overlay.id="companionResourceEditorOverlay";overlay.innerHTML=`<div class="hp-editor"><h2>${esc(cleanResourceName(resource.name))}</h2><div class="hp-field"><label>Ressource restante</label><input id="edit-comp-resource-value" type="number" min="0" max="${resource.max}" value="${resource.value}"><small>Maximum : ${resource.max}</small></div><div class="hp-editor-actions"><button onclick="closeCompanionResourceEditor()">Annuler</button><button class="primary" onclick="saveCompanionResourceEditor(${index})">Valider</button></div></div>`;document.body.appendChild(overlay)}
+function saveCompanionResourceEditor(index){const resource=companion.resources[index];if(!resource)return;const value=Number(document.getElementById("edit-comp-resource-value").value);resource.value=Math.max(0,Math.min(Number.isFinite(value)?value:resource.max,resource.max));closeCompanionResourceEditor();companionSheet()}
+function closeCompanionResourceEditor(){document.getElementById("companionResourceEditorOverlay")?.remove()}
 function renderCompanionActionIsland(title, actions) {
 
     return `
@@ -7253,15 +7296,8 @@ function renderCompanionActionCard(x) {
                     ${esc(x.cost)}
                 </div>
 
-                ${
-                    x.damage
-                    ?
-                    `<div class="damage">
-                        ${esc(x.damage)}
-                    </div>`
-                    :
-                    ""
-                }
+                ${renderAttackRoll(x.attackRoll)}
+                ${renderDamageValue(x.damages)}
 
                 <button
                     class="primary"
@@ -7338,9 +7374,8 @@ function showCompanionAction(i) {
                 </span>
 
 
-                <div class="damage">
-                    ${esc(x.damage || "—")}
-                </div>
+                ${renderAttackRoll(x.attackRoll)}
+                ${renderDamageValue(x.damages)}
 
 
                 <p>
